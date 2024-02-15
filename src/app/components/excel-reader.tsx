@@ -2,7 +2,8 @@
 
 import React from 'react';
 import * as XLSX from 'xlsx';
-
+import { has, get, last, includes } from 'lodash';
+import { log } from 'console';
 const pairs = [
     'NZDCAD',
     'NZDCHF',
@@ -54,6 +55,11 @@ const pairs = [
     'EURAUD',
     'GBPAUD',
 ];
+
+const OrderTypes = [
+    'buy',
+    'sell',
+];
 const ExcelReader = () => {
     const handleFile = (e: any) => {
         const file = e.target.files[0];
@@ -69,13 +75,26 @@ const ExcelReader = () => {
             // convert array of arrays
             const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
             // update state
+            let insert = false;
             data.forEach((res: any, keyDataIndex: number) => {
-                Object.values(res).forEach((value: any, index: number) => {
-                    if (pairs.includes(value)) {
+                if(includes(res, 'Deals')){
+                    insert = true;
+                }
+                if(insert && pairs.includes(res[2])) {
+                    if(includes(last(res), 'EA')){
+                        res.keyDataIndex = keyDataIndex;
                         result.push(res);
                     }
-                });
+                }
+                
             });
+            
+            result.forEach((element: any) => {
+                if (element.length > 12) {
+                    element.isWin = includes(last(data[element['keyDataIndex'] + 1]), 'tp');
+                }
+            });
+            console.log(result.length, result.filter((res: any) => res.isWin === true).length, result.filter((res: any) => res.isWin === false).length);
             console.log(result);
         };
         reader.readAsArrayBuffer(file);
