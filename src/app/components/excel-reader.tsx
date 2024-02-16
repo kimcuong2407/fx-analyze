@@ -2,8 +2,8 @@
 
 import React from 'react';
 import * as XLSX from 'xlsx';
-import { has, get, last, includes } from 'lodash';
-import { log } from 'console';
+import { last, includes, split } from 'lodash';
+
 const pairs = [
     'NZDCAD',
     'NZDCHF',
@@ -55,13 +55,14 @@ const pairs = [
     'EURAUD',
     'GBPAUD',
 ];
+interface Props {
+    setDataBuffer: (value: []) => void;
+    setLoading: (value: boolean) => void;
+}
 
-const OrderTypes = [
-    'buy',
-    'sell',
-];
-const ExcelReader = () => {
+const ExcelReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
     const handleFile = (e: any) => {
+        setLoading(true);
         const file = e.target.files[0];
         const reader = new FileReader();
         reader.onload = (evt: any) => {
@@ -76,28 +77,60 @@ const ExcelReader = () => {
             const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
             // update state
             let insert = false;
+            let countFor = 0;
             data.forEach((res: any, keyDataIndex: number) => {
-                if(includes(res, 'Deals')){
+                countFor++;
+                if (includes(res, 'Deals')) {
                     insert = true;
                 }
-                if(insert && pairs.includes(res[2])) {
-                    if(includes(last(res), 'EA')){
+                if (insert && pairs.includes(split(res[2], '.')[0])) {
+                    if (includes(last(res as string[]), 'EA')) {
                         res.keyDataIndex = keyDataIndex;
                         result.push(res);
                     }
                 }
-                
             });
-            
-            result.forEach((element: any) => {
+            const buffer = result.filter((element: any) => {
+                countFor++;
                 if (element.length > 12) {
-                    element.isWin = includes(last(data[element['keyDataIndex'] + 1]), 'tp');
+                    const data: (string | number)[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                    element.isWin = includes(last(data[element['keyDataIndex'] + 1]) as unknown as string[], 'tp');
                 }
-            });
-            console.log(result.length, result.filter((res: any) => res.isWin === true).length, result.filter((res: any) => res.isWin === false).length);
-            console.log(result);
+                return element.length > 12;
+            }).reduce((acc: any, element: any) => {
+                countFor++;
+                if (acc.length > 0) {
+                    const lastElement: any = last(acc);
+                    if (lastElement.isWin == element.isWin) {
+                        lastElement.total += 1;
+                        return acc;
+                    }
+                }
+                acc.push({
+                    isWin: element.isWin,
+                    total: 1,
+                })
+                return acc;
+
+            }, []).reduce((acc: any, element: any) => {
+                const findTotal = acc.find((el: any) => el.total == element.total && el.isWin == element.isWin);
+                if (findTotal) {
+                    findTotal.count += 1;
+                } else {
+                    acc.push({
+                        total: element.total,
+                        isWin: element.isWin,
+                        count: 1,
+                    });
+                }
+                return acc;
+            }, []);
+            setDataBuffer(buffer);
         };
-        reader.readAsArrayBuffer(file);
+        if (file) {
+            reader.readAsArrayBuffer(file);
+        }
+        setLoading(false);
     };
 
     return (
