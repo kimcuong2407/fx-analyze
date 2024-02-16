@@ -54,6 +54,7 @@ const pairs = [
     'AUDUSD',
     'EURAUD',
     'GBPAUD',
+    'XAUUSD',
 ];
 interface Props {
     setDataBuffer: (value: []) => void;
