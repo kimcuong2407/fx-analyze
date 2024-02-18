@@ -3,7 +3,7 @@
 import React from 'react';
 import * as XLSX from 'xlsx';
 import { last, includes, split } from 'lodash';
-
+import { message } from 'antd';
 const pairs = [
     'NZDCAD',
     'NZDCHF',
@@ -62,8 +62,10 @@ interface Props {
 }
 
 const ExcelReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
+    const [messageApi, contextHolder] = message.useMessage();
+
     const handleFile = (e: any) => {
-        setLoading(true);
+        messageApi.info('Start reading file');
         const file = e.target.files[0];
         const reader = new FileReader();
         reader.onload = (evt: any) => {
@@ -78,9 +80,8 @@ const ExcelReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
             const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
             // update state
             let insert = false;
-            let countFor = 0;
+
             data.forEach((res: any, keyDataIndex: number) => {
-                countFor++;
                 if (includes(res, 'Deals')) {
                     insert = true;
                 }
@@ -91,15 +92,16 @@ const ExcelReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
                     }
                 }
             });
-            const buffer = result.filter((element: any) => {
+            let countFor = 0;
+            const buffer = result.reduce((acc: any, element: any) => {
                 countFor++;
                 if (element.length > 12) {
                     const data: (string | number)[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
                     element.isWin = includes(last(data[element['keyDataIndex'] + 1]) as unknown as string[], 'tp');
+                } else {
+                    return acc;
                 }
-                return element.length > 12;
-            }).reduce((acc: any, element: any) => {
-                countFor++;
+
                 if (acc.length > 0) {
                     const lastElement: any = last(acc);
                     if (lastElement.isWin == element.isWin) {
@@ -114,6 +116,7 @@ const ExcelReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
                 return acc;
 
             }, []).reduce((acc: any, element: any) => {
+
                 const findTotal = acc.find((el: any) => el.total == element.total && el.isWin == element.isWin);
                 if (findTotal) {
                     findTotal.count += 1;
@@ -126,12 +129,13 @@ const ExcelReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
                 }
                 return acc;
             }, []);
+
             setDataBuffer(buffer);
+            messageApi.success('File readed');
         };
         if (file) {
             reader.readAsArrayBuffer(file);
         }
-        setLoading(false);
     };
 
     return (
