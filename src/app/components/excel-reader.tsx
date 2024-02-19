@@ -5,15 +5,9 @@ import * as XLSX from 'xlsx';
 import { last, includes, split } from 'lodash';
 const pairs = [
     'NZDCAD',
-    'NZDCHF',
-    'NZDJPY',
     'NDZUSD',
     'AUDNZD',
-    'EURNZD',
-    'GBPNZD',
     'AUDJPY',
-    'CADJPY',
-    'CHFJPY',
     'EURJPY',
     'GBPJPY',
     'NZDJPY',
@@ -42,17 +36,8 @@ const pairs = [
     'AUDCAD',
     'CADCHF',
     'CADJPY',
-    'EURCAD',
-    'GBPCAD',
-    'NZDCAD',
     'USDCAD',
-    'AUDCAD',
-    'AUDCHF',
-    'AUDJPY',
-    'AUDNZD',
     'AUDUSD',
-    'EURAUD',
-    'GBPAUD',
     'XAUUSD',
 ];
 interface Props {
@@ -74,10 +59,9 @@ const ExcelReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
             const wsname = wb.SheetNames[0];
             const ws = wb.Sheets[wsname];
             // convert array of arrays
-            const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+            const data: (string | number)[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
             // update state
             let insert = false;
-
             data.forEach((res: any, keyDataIndex: number) => {
                 if (includes(res, 'Deals')) {
                     insert = true;
@@ -89,11 +73,8 @@ const ExcelReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
                     }
                 }
             });
-            let countFor = 0;
             const buffer = result.reduce((acc: any, element: any) => {
-                countFor++;
                 if (element.length > 12) {
-                    const data: (string | number)[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
                     element.isWin = includes(last(data[element['keyDataIndex'] + 1]) as unknown as string[], 'tp');
                 } else {
                     return acc;

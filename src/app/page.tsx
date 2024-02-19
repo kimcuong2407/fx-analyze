@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 
 import ExcelReader from '@/app/components/excel-reader';
-import TableComponent from './components/table';
+import TableComponent from '@/app/components/table';
 import { Space, Spin } from 'antd';
 
 
