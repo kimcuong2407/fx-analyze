@@ -3,7 +3,6 @@
 import React from 'react';
 import * as XLSX from 'xlsx';
 import { last, includes, split } from 'lodash';
-import { message } from 'antd';
 const pairs = [
     'NZDCAD',
     'NZDCHF',
@@ -62,10 +61,8 @@ interface Props {
 }
 
 const ExcelReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
-    const [messageApi, contextHolder] = message.useMessage();
 
     const handleFile = (e: any) => {
-        messageApi.info('Start reading file');
         const file = e.target.files[0];
         const reader = new FileReader();
         reader.onload = (evt: any) => {
@@ -131,7 +128,6 @@ const ExcelReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
             }, []);
 
             setDataBuffer(buffer);
-            messageApi.success('File readed');
         };
         if (file) {
             reader.readAsArrayBuffer(file);
