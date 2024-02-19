@@ -9,13 +9,16 @@ import { Space, Spin } from 'antd';
 const MyApp = () => {
   const [dataBuffer, setDataBuffer] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+
   return (
     <div className='p-10'>
       <Space direction="vertical" size="middle" style={{ display: 'flex' }}>
         <Spin spinning={loading} >
           <ExcelReader setLoading={setLoading} setDataBuffer={setDataBuffer} />
-          <TableComponent dataTable={dataBuffer} />
+
+          {dataBuffer && dataBuffer.map((data) => {
+            return <TableComponent dataTable={data} />
+          })}
         </Spin>
       </Space>
     </div >
