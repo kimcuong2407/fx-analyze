@@ -2,14 +2,14 @@ import React from 'react';
 import { Table } from 'antd';
 import type { TableProps } from 'antd';
 
-interface DataType {
-    total: number;
+export interface DataTypeTable {
+    streakCount: number;
     isWin: boolean;
     count: number;
 }
 
 interface Props {
-    dataTable: DataType[];
+    dataTable: DataTypeTable[];
 }
 
 
@@ -18,12 +18,12 @@ const TableComponent: React.FC<Props> = ({ dataTable }) => {
     if (dataTable.length === 0) return (<></>);
 
     const totalCount = dataTable.reduce((acc, element) => acc + element.count, 0);
-    console.log('totalCount', totalCount);
-    const columns: TableProps<DataType>['columns'] = [
+
+    const columns: TableProps<DataTypeTable>['columns'] = [
         {
             title: 'Chuỗi lệnh liên tiếp',
-            dataIndex: 'total',
-            sorter: (a, b) => a.total - b.total,
+            dataIndex: 'streakCount',
+            sorter: (a, b) => a.streakCount - b.streakCount,
             render: (text) => <a>{text}</a>,
         },
         {

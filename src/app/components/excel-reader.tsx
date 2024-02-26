@@ -2,7 +2,8 @@
 
 import React from 'react';
 import * as XLSX from 'xlsx';
-import { last, includes, split, map, groupBy, sumBy, set } from 'lodash';
+import { last, includes, split, groupBy } from 'lodash';
+import { DataTypeTable } from './table';
 const pairs = [
     'NZDCAD',
     'NDZUSD',
@@ -78,7 +79,7 @@ const ExcelReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
                                 }
                             }
                         });
-                        const buffer = result.reduce((acc: any, element: any) => {
+                        const buffer: DataTypeTable[] = result.reduce((acc: DataTypeTable[], element: any) => {
                             if (element.length > 12) {
                                 element.isWin = includes(last(data[element['keyDataIndex'] + 1]) as unknown as string[], 'tp');
                             } else {
@@ -86,29 +87,31 @@ const ExcelReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
                             }
 
                             if (acc.length > 0) {
-                                const lastElement: any = last(acc);
-                                if (lastElement.isWin == element.isWin) {
-                                    lastElement.total += 1;
+                                const lastElement: DataTypeTable | undefined = last(acc);
+                                if (lastElement && lastElement.isWin == element.isWin) {
+                                    lastElement.streakCount += 1;
                                     return acc;
                                 }
                             }
                             acc.push({
                                 isWin: element.isWin,
-                                total: 1,
+                                streakCount: 1,
+                                count: 0,
                             })
                             return acc;
 
-                        }, []).reduce((acc: any, element: any) => {
+                        }, []).reduce((acc: DataTypeTable[], element: DataTypeTable) => {
 
-                            const findTotal = acc.find((el: any) => el.total == element.total && el.isWin == element.isWin);
+                            const findTotal: DataTypeTable | undefined = acc.find((el: DataTypeTable) => el.streakCount == element.streakCount && el.isWin == element.isWin);
                             if (findTotal) {
                                 findTotal.count += 1;
                             } else {
-                                acc.push({
-                                    total: element.total,
+                                const r: DataTypeTable = {
+                                    streakCount: element.streakCount,
                                     isWin: element.isWin,
                                     count: 1,
-                                });
+                                }
+                                acc.push(r);
                             }
                             return acc;
                         }, []);
@@ -121,19 +124,19 @@ const ExcelReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
                 });
             })
         ).then((allData) => {
-            console.log(allData.flat());
-            const r = groupBy(allData.flat(), (i: any) => {
-                return i.total && i.isWin;
+            const r = groupBy(allData.flat(), (i: DataTypeTable) => {
+                return i.streakCount && i.isWin;
             });
-            const rBuffer: any = Object.keys(r).map((key) => {
+            const rBuffer: any[] = Object.keys(r).map((key) => {
                 return r[key].reduce((acc: any, element: any) => {
-                    const result = acc.find((el: any) => el.total == element.total);
-                    if(!result) {
-                        acc.push({
-                            total: element.total,
+                    const result: DataTypeTable | undefined = acc.find((el: DataTypeTable) => el.streakCount == element.streakCount);
+                    if (!result) {
+                        const r: DataTypeTable = {
+                            streakCount: element.streakCount,
                             isWin: element.isWin,
                             count: element.count,
-                        });
+                        };
+                        acc.push(r);
                     } else {
                         result.count += element.count;
                     }

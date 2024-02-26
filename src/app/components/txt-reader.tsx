@@ -1,22 +1,45 @@
 'use client';
 
-import React, { ChangeEvent, ChangeEventHandler, useState } from 'react';
+import React, { ChangeEvent } from 'react';
+import { DataTypeTable } from '@/app/components/table';
+import { groupBy, last } from 'lodash';
 
 interface Props {
     setDataBuffer: (value: any) => void;
     setLoading: (value: boolean) => void;
 }
-interface Result {
-    [key: string]: number;
+
+interface DataTypeTxt {
+    result: boolean;
+    orderType: string;
+    entry: number;
+    sl: number;
+    tp: number;
+    start: Date;
+    end: Date | null;
 }
-const textToJson = (text: string): string => {
+const textToJson = (text: string): string[][] => {
     const parts = text.split('\r\n');
 
     return parts.map((part) => {
-        return part.split('-').filter((item, key) => key < 1);
-    }).join('');
+        return part.split('-');
+    });
 }
 
+const convertData = (contents: string[][]): DataTypeTxt[] => {
+    return contents.map((content) => {
+
+        return {
+            result: content[0] == '1' ? true : false,
+            orderType: content[1] == '1' ? 'Buy' : 'Sell',
+            entry: parseFloat(content[2]),
+            sl: parseFloat(content[3]),
+            tp: parseFloat(content[4]),
+            start: new Date(parseInt(content[5]) * 1000),
+            end: content[5] ? new Date(parseInt(content[6]) * 1000) : null,
+        }
+    });
+}
 
 const calculateRepeat = (data: string): { [key: string]: number } => {
     const stringFind = '2222';
@@ -34,19 +57,6 @@ const calculateRepeat = (data: string): { [key: string]: number } => {
     const a = resultArr.map((item) => {
         return item
     })
-    // .reduce((acc: Result[], cur: string) => {
-    //     const find: Result | undefined = acc.find((item) => item.value == cur);
-    //     if (!find) {
-    //         acc.push({
-    //             value: parseInt(cur),
-    //             count: 1
-    //         });
-    //     } else {
-    //         find.count = find.count + 1;
-    //     }
-    //     return acc;
-    // }, []);
-    console.log(a);
 
     return {
         "hello": 1,
@@ -54,7 +64,6 @@ const calculateRepeat = (data: string): { [key: string]: number } => {
 
 }
 const TxtReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
-    const [textFromFile, setTextFromFile] = useState<string>('');
 
 
     function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -69,10 +78,66 @@ const TxtReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
 
         reader.onload = (e: ProgressEvent<FileReader>) => {
             const text = e.target?.result;
-            const results = textToJson(text as string);
-            console.log(results.split('').map((item) => item == '2' ? 'Lose' : 'Win').join(''));
-            calculateRepeat(results);
-
+            const results: string[][] = textToJson(text as string);
+            const data = convertData(results);
+            const dataBufferTxt: DataTypeTable[] = data.reduce((acc: DataTypeTable[], element: DataTypeTxt) => {
+                if (acc.length === 0) {
+                    const r: DataTypeTable = {
+                        streakCount: 1,
+                        isWin: element.result,
+                        count: 0,
+                    };
+                    acc.push(r);
+                    return acc;
+                }
+                const findLastElement: DataTypeTable | undefined = last(acc);
+                if (findLastElement?.isWin == element.result) {
+                    findLastElement.streakCount += 1;
+                } else {
+                    acc.push({
+                        streakCount: 1,
+                        isWin: element.result,
+                        count: 0,
+                    });
+                }
+                return acc
+            }, []).reduce((acc: DataTypeTable[], element: DataTypeTable) => {
+                const findTotal: DataTypeTable | undefined = acc.find(
+                    (el: DataTypeTable) => {
+                        return el.streakCount == element.streakCount && el.isWin == element.isWin
+                    }
+                );
+                if (findTotal) {
+                    findTotal.count = findTotal.count ? findTotal.count + 1 : 1;
+                } else {
+                    acc.push({
+                        streakCount: element.streakCount,
+                        isWin: element.isWin,
+                        count: 1,
+                    });
+                }
+                return acc;
+            }, []);
+            const r = groupBy(dataBufferTxt, (i: DataTypeTable) => {
+                return i.streakCount && i.isWin;
+            });
+            const rBuffer: any = Object.keys(r).map((key) => {
+                return r[key].reduce((acc: DataTypeTable[], element: DataTypeTable) => {
+                    const result: DataTypeTable | undefined = acc.find((el: DataTypeTable) => el.streakCount == element.streakCount);
+                    if(!result) {
+                        const r: DataTypeTable = {
+                            streakCount: element.streakCount,
+                            isWin: element.isWin,
+                            count: element.count,
+                        };
+                        acc.push(r);
+                    } else {
+                        result.count += element.count;
+                    }
+                    return acc;
+                }, []);
+            });
+            setDataBuffer(rBuffer);
         };
 
         reader.readAsText(file); // Đọc nội dung file dưới dạng văn bản
