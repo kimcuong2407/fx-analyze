@@ -2,7 +2,7 @@
 
 import React, { ChangeEvent } from 'react';
 import { DataTypeTable } from '@/app/components/table';
-import { groupBy, last } from 'lodash';
+import { groupBy, last, max, min } from 'lodash';
 
 interface Props {
     setDataBuffer: (value: any) => void;
@@ -16,7 +16,7 @@ interface DataTypeTxt {
     sl: number;
     tp: number;
     start: Date;
-    end: Date | null;
+    end: Date;
 }
 const textToJson = (text: string): string[][] => {
     const parts = text.split('\r\n');
@@ -35,8 +35,8 @@ const convertData = (contents: string[][]): DataTypeTxt[] => {
             entry: parseFloat(content[2]),
             sl: parseFloat(content[3]),
             tp: parseFloat(content[4]),
-            start: new Date(parseInt(content[5]) * 1000),
-            end: content[5] ? new Date(parseInt(content[6]) * 1000) : null,
+            start: new Date(content[5]),
+            end: new Date(content[6]),
         }
     });
 }
@@ -80,6 +80,22 @@ const TxtReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
             const text = e.target?.result;
             const results: string[][] = textToJson(text as string);
             const data = convertData(results);
+            const count = 15;
+            const rr: any = data.reduce((acc: any, element: any, index, arr) => {
+                const result = arr.slice(index, index + count);
+                if (index + count >= arr.length) {
+                    return acc;
+                }
+
+                const totalRR = result.reduce((acc: any, element: any) => {
+                    const r = element.result ? 1 : -3;
+                    return acc + r;
+                }, 0);
+
+                acc.push(totalRR);
+                return acc;
+            }, []).filter((i: any) => i < -15).length;
+            console.log(rr);
             const dataBufferTxt: DataTypeTable[] = data.reduce((acc: DataTypeTable[], element: DataTypeTxt) => {
                 if (acc.length === 0) {
                     const r: DataTypeTable = {
@@ -124,7 +140,7 @@ const TxtReader: React.FC<Props> = ({ setDataBuffer, setLoading }) => {
             const rBuffer: any = Object.keys(r).map((key) => {
                 return r[key].reduce((acc: DataTypeTable[], element: DataTypeTable) => {
                     const result: DataTypeTable | undefined = acc.find((el: DataTypeTable) => el.streakCount == element.streakCount);
-                    if(!result) {
+                    if (!result) {
                         const r: DataTypeTable = {
                             streakCount: element.streakCount,
                             isWin: element.isWin,
